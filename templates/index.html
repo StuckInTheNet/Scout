@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scout - Discover Events Near You</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f5f5;
+            color: #1a1a1a;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        .leaflet-control-zoom a {
+            background: #fff !important;
+            color: #333 !important;
+            border-color: #ccc !important;
+        }
+        .leaflet-control-attribution { display: none; }
+
+        /* Top bar */
+        .top-bar {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 1000;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 360px;
+            max-width: calc(100vw - 24px);
+        }
+        .search-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+
+        .radius-control {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: #f3f4f6;
+            border-radius: 8px;
+            border: none;
+            overflow: hidden;
+        }
+
+        .radius-input {
+            width: 42px;
+            padding: 7px 4px 7px 10px;
+            background: transparent;
+            border: none;
+            color: #4f46e5;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            outline: none;
+            text-align: right;
+            -moz-appearance: textfield;
+        }
+        .radius-input::-webkit-inner-spin-button,
+        .radius-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+        .radius-unit {
+            padding: 7px 10px 7px 4px;
+            font-size: 12px;
+            color: #888;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .search-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: #f3f4f6;
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: background 0.2s;
+            flex: 1;
+        }
+        .search-input-group:focus-within {
+            background: #eef0f4;
+        }
+        .search-icon {
+            margin-left: 16px;
+            flex-shrink: 0;
+        }
+        .search-input {
+            width: 100%;
+            padding: 14px 12px;
+            background: transparent;
+            border: none;
+            color: #1a1a1a;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 500;
+            outline: none;
+        }
+        .search-input::placeholder { color: #bbb; font-weight: 400; font-style: italic; }
+        .search-clear {
+            padding: 7px 8px;
+            background: rgba(0,0,0,0.04);
+            border: none;
+            border-left: 1px solid rgba(0,0,0,0.08);
+            color: #666;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            display: none;
+        }
+        .search-clear:hover { color: #4f46e5; }
+        .search-clear.visible { display: block; }
+
+        .zip-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: #f3f4f6;
+            border: none;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .zip-input {
+            width: 80px;
+            padding: 7px 10px;
+            background: transparent;
+            border: none;
+            color: #1a1a1a;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+        }
+        .zip-input::placeholder { color: #666; }
+        .zip-go {
+            padding: 7px 10px;
+            background: rgba(0,0,0,0.04);
+            border: none;
+            border-left: 1px solid rgba(0,0,0,0.08);
+            color: #999;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .zip-go:hover { background: rgba(79,70,229,0.2); color: #4f46e5; }
+
+        .date-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: #f3f4f6;
+            border: none;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .date-input {
+            padding: 7px 6px;
+            background: transparent;
+            border: none;
+            color: #1a1a1a;
+            font-family: inherit;
+            font-size: 11px;
+            outline: none;
+            width: 105px;
+            cursor: pointer;
+        }
+        .date-input::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            margin-left: -2px;
+        }
+        .date-sep {
+            color: #aaa;
+            font-size: 11px;
+            padding: 0 2px;
+            user-select: none;
+        }
+        .date-clear {
+            padding: 7px 8px;
+            background: rgba(0,0,0,0.04);
+            border: none;
+            border-left: 1px solid rgba(0,0,0,0.08);
+            color: #666;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            display: none;
+            transition: all 0.2s;
+        }
+        .date-clear:hover { color: #4f46e5; }
+        .date-clear.visible { display: block; }
+
+        .btn-locate {
+            background: #f3f4f6;
+            color: #555;
+            border: none;
+            border-radius: 8px;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .btn-locate:hover { background: #e5e7eb; }
+
+        .btn-search {
+            background: #4f46e5;
+            color: #fff;
+            border-radius: 12px;
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .btn-search:hover { background: #4338ca; }
+        .btn-search:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Source badges */
+        .filters-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .source-filters {
+            display: none;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .source-filters.visible { display: flex; }
+
+        .source-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            color: #999;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .source-badge.active { border-color: #4f46e5; color: #4f46e5; }
+
+        .source-badge .count {
+            margin-left: 4px;
+            opacity: 0.6;
+        }
+
+        /* Category filters */
+        .category-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f3f4f6;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .category-toggle:hover { background: #e5e7eb; }
+        .category-toggle svg { transition: transform 0.2s; }
+        .category-toggle.open svg { transform: rotate(180deg); }
+        .category-toggle .active-cat {
+            color: #4f46e5;
+        }
+
+        .category-bar {
+            display: none;
+            gap: 6px;
+            flex-wrap: wrap;
+            max-width: 420px;
+            padding: 2px 0;
+        }
+        .category-bar.open { display: flex; }
+
+        .cat-chip {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            border: none;
+            background: #fff;
+            color: #666;
+            transition: all 0.2s;
+            user-select: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .cat-chip:hover { color: #333; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+        .cat-chip.active {
+            color: #fff;
+            background: #4f46e5;
+            box-shadow: 0 2px 6px rgba(79,70,229,0.3);
+        }
+
+        /* Event detail panel */
+        .event-panel {
+            position: fixed;
+            bottom: -100%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
+            width: 95vw;
+            max-width: 420px;
+            max-height: 60vh;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 20px 20px 20px 20px;
+            padding: 0;
+            overflow: hidden;
+            transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.15);
+        }
+
+        .event-panel.open { bottom: 20px; }
+
+        .event-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px 20px 12px;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+
+        .event-panel-close {
+            background: rgba(0,0,0,0.1);
+            border: none;
+            color: #999;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .event-panel-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+            line-height: 1.3;
+            flex: 1;
+            margin-right: 12px;
+        }
+
+        .event-panel-body {
+            padding: 16px 20px 20px;
+            overflow-y: auto;
+            max-height: calc(60vh - 80px);
+        }
+
+        .event-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .event-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .event-meta-row svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            fill: #4f46e5;
+        }
+
+        .event-source-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(79, 70, 229, 0.15);
+            color: #4f46e5;
+        }
+
+        .event-description {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #999;
+            margin-bottom: 16px;
+        }
+
+        .event-image {
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            max-height: 200px;
+            object-fit: cover;
+        }
+
+        .btn-open-event {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #4f46e5;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-open-event:hover { background: #4338ca; }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1002;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .loading-overlay.visible { display: flex; }
+
+        .scout-loader {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+
+        .scout-loader .ping {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid #4f46e5;
+            opacity: 0;
+            animation: ping 2s ease-out infinite;
+        }
+        .scout-loader .ping:nth-child(2) { animation-delay: 0.5s; }
+        .scout-loader .ping:nth-child(3) { animation-delay: 1s; }
+
+        .scout-loader .center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 14px;
+            height: 14px;
+            background: #4f46e5;
+            border-radius: 50%;
+            box-shadow: 0 0 12px rgba(79,70,229,0.4);
+            animation: dot-pulse 2s ease-in-out infinite;
+        }
+
+        .scout-loader .sweep {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50%;
+            height: 2px;
+            transform-origin: left center;
+            background: linear-gradient(90deg, #4f46e5, transparent);
+            animation: sweep 2s linear infinite;
+            border-radius: 2px;
+        }
+
+        @keyframes ping {
+            0% { transform: scale(0.3); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+
+        @keyframes dot-pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.3); }
+        }
+
+        @keyframes sweep {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: #999;
+            background: rgba(255,255,255,0.95);
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+
+        /* Event count badge */
+        .event-count {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-size: 14px;
+            color: #999;
+            display: none;
+            transition: opacity 0.3s;
+        }
+
+        .event-count.visible { display: block; }
+        .event-count strong { color: #4f46e5; }
+
+        /* Sidebar event list */
+        .event-list-toggle {
+            position: fixed;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 12px;
+            width: 40px;
+            height: 40px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #999;
+            font-size: 18px;
+        }
+
+        .event-list-toggle.visible { display: flex; }
+
+        .event-sidebar {
+            position: fixed;
+            right: -380px;
+            top: 0;
+            width: 360px;
+            height: 100vh;
+            z-index: 1001;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(24px);
+            border-left: 1px solid rgba(0,0,0,0.08);
+            overflow-y: auto;
+            transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 20px;
+        }
+
+        .event-sidebar.open { right: 0; }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .sidebar-header h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .sidebar-close {
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .event-list-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(0,0,0,0.04);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            align-items: flex-start;
+        }
+
+        .event-list-item:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(79,70,229,0.3);
+            transform: translateX(2px);
+        }
+
+        .event-list-date {
+            flex-shrink: 0;
+            width: 44px;
+            text-align: center;
+            padding: 6px 0;
+            border-radius: 8px;
+            background: rgba(79,70,229,0.1);
+        }
+        .event-list-date .month {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #4f46e5;
+            letter-spacing: 0.5px;
+        }
+        .event-list-date .day {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+            line-height: 1.2;
+        }
+
+        .event-list-info { flex: 1; min-width: 0; }
+
+        .event-list-info h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+            line-height: 1.3;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .event-list-info .venue {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .event-list-info .meta {
+            font-size: 11px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .event-list-info .source-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Instruction hint */
+        .map-hint {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 13px;
+            color: #888;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        /* Custom marker */
+        .custom-marker {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .custom-marker:hover { transform: scale(1.3); }
+        .custom-marker.outside-radius {
+            width: 10px;
+            height: 10px;
+            opacity: 0.45;
+            border-width: 1.5px;
+            border-style: dashed;
+        }
+        .custom-marker.outside-radius:hover { opacity: 0.8; }
+
+        .marker-eventbrite { background: #f05537; }
+        .marker-meetup { background: #ed1c40; }
+        .marker-allevents { background: #7c3aed; }
+        .marker-ticketmaster { background: #026cdf; }
+        .marker-facebook { background: #1877f2; }
+        .marker-yelp { background: #d32323; }
+        .marker-default { background: #4f46e5; }
+
+        /* Pin marker */
+        .pin-marker {
+            width: 30px;
+            height: 30px;
+            position: relative;
+        }
+        .pin-marker::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 24px;
+            background: #4f46e5;
+            border-radius: 50% 50% 50% 0;
+            transform: translateX(-50%) rotate(-45deg);
+            border: 3px solid #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .pin-marker::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: rgba(79,70,229,0.3);
+            border-radius: 50%;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 640px) {
+            .top-bar { left: 8px; max-width: calc(100vw - 16px); }
+            .radius-input { width: 36px; }
+            .event-panel { max-width: 100vw; width: 100vw; border-radius: 20px 20px 0 0; }
+            .event-panel.open { bottom: 0; }
+            .event-sidebar { width: 100vw; right: -100vw; }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- Top bar -->
+    <div class="top-bar">
+        <div class="search-row">
+            <div class="search-input-group">
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" class="search-input" id="search-input" placeholder="What are you scouting for?" />
+                <button class="search-clear" id="search-clear">&times;</button>
+            </div>
+            <button class="btn btn-search" id="btn-search" disabled>Scout</button>
+        </div>
+        <div class="controls-row">
+            <div class="radius-control">
+                <input type="number" class="radius-input" id="radius" min="1" max="100" value="10" />
+                <span class="radius-unit">mi</span>
+            </div>
+            <div class="date-input-group">
+                <input type="date" class="date-input" id="date-from" title="From date" />
+                <span class="date-sep">-</span>
+                <input type="date" class="date-input" id="date-to" title="To date" />
+                <button class="date-clear" id="date-clear" title="Clear dates">&times;</button>
+            </div>
+            <div class="zip-input-group">
+                <input type="text" class="zip-input" id="zip-input" placeholder="Zip" maxlength="5" inputmode="numeric" pattern="[0-9]*" />
+                <button class="zip-go" id="zip-go" title="Go to zip code">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+            </div>
+            <button class="btn btn-locate" id="btn-locate" title="Use my location">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
+                </svg>
+            </button>
+        </div>
+        <div class="filters-container">
+        <button class="category-toggle" id="category-toggle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/></svg>
+            <span class="active-cat" id="active-cat-label">All</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="category-bar" id="category-bar">
+            <div class="cat-chip active" data-cat="all">All</div>
+            <div class="cat-chip" data-cat="music">Music</div>
+            <div class="cat-chip" data-cat="sports">Sports</div>
+            <div class="cat-chip" data-cat="food">Food & Drink</div>
+            <div class="cat-chip" data-cat="arts">Arts</div>
+            <div class="cat-chip" data-cat="kids">Kids & Family</div>
+            <div class="cat-chip" data-cat="nightlife">Nightlife</div>
+            <div class="cat-chip" data-cat="dance">Dance</div>
+            <div class="cat-chip" data-cat="fitness">Fitness</div>
+            <div class="cat-chip" data-cat="tech">Tech</div>
+            <div class="cat-chip" data-cat="community">Community</div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="loading">
+        <div class="scout-loader">
+            <div class="ping"></div>
+            <div class="ping"></div>
+            <div class="ping"></div>
+            <div class="sweep"></div>
+            <div class="center-dot"></div>
+        </div>
+        <div class="loading-text">Scouting events nearby...</div>
+    </div>
+
+    <!-- Event detail panel -->
+    <div class="event-panel" id="event-panel">
+        <div class="event-panel-header">
+            <div class="event-panel-title" id="panel-title"></div>
+            <button class="event-panel-close" id="panel-close">&times;</button>
+        </div>
+        <div class="event-panel-body" id="panel-body"></div>
+    </div>
+
+    <!-- Event count -->
+    <div class="event-count" id="event-count"></div>
+
+    <!-- List toggle -->
+    <div class="event-list-toggle" id="list-toggle" title="Show event list">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+    </div>
+
+    <!-- Event sidebar -->
+    <div class="event-sidebar" id="event-sidebar">
+        <div class="sidebar-header">
+            <h2>Events</h2>
+            <button class="sidebar-close" id="sidebar-close">&times;</button>
+        </div>
+        <div id="event-list"></div>
+    </div>
+
+    <!-- Hint -->
+    <div class="map-hint" id="map-hint">Click anywhere on the map to drop a pin, then search for events</div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script>
+        // State
+        let map, pinMarker, radiusCircle;
+        let eventMarkers = [];
+        let markerClusterGroup = null;
+        let allEvents = [];
+        let activeSources = new Set();
+        let activeCategory = 'all';
+        let dateFrom = null; // Date object or null
+        let dateTo = null;   // Date object or null
+        let searchQuery = ''; // free-text search
+        let pinLat = null, pinLon = null;
+
+        const CATEGORY_KEYWORDS = {
+            music: ['music', 'concert', 'live band', 'dj', 'jazz', 'hip hop', 'rap', 'rock', 'symphony', 'orchestra', 'festival', 'rave', 'edm', 'karaoke', 'open mic', 'acoustic', 'singer'],
+            sports: ['sport', 'game', 'basketball', 'football', 'soccer', 'baseball', 'tennis', 'golf', 'run', 'marathon', 'race', 'tournament', 'volleyball', 'softball', 'boxing', 'mma', 'wrestling', 'cycling', 'swim'],
+            food: ['food', 'drink', 'brunch', 'dinner', 'tasting', 'wine', 'beer', 'brewery', 'cocktail', 'cooking', 'chef', 'restaurant', 'bbq', 'barbeque', 'happy hour', 'curry', 'culinary', 'farm'],
+            arts: ['art', 'gallery', 'museum', 'exhibit', 'painting', 'sculpture', 'theater', 'theatre', 'comedy', 'improv', 'film', 'movie', 'cinema', 'poetry', 'literary', 'book', 'craft'],
+            kids: ['kid', 'child', 'family', 'toddler', 'baby', 'youth', 'teen', 'school', 'camp', 'puppet', 'storytime', 'lego', 'playground', 'parent'],
+            nightlife: ['nightlife', 'club', 'bar', 'lounge', 'party', 'rooftop', 'night out', 'happy hour', 'afterparty', 'after party', 'bottle service'],
+            dance: ['dance', 'dancing', 'salsa', 'bachata', 'swing', 'tango', 'ballet', 'hip-hop', 'zumba', 'ballroom', 'line dance', 'choreography'],
+            fitness: ['fitness', 'yoga', 'pilates', 'workout', 'crossfit', 'gym', 'bootcamp', 'meditation', 'wellness', 'calisthenics', 'hike', 'hiking', 'walk', 'cycling', 'spin'],
+            tech: ['tech', 'coding', 'programming', 'developer', 'startup', 'hack', 'ai', 'data', 'software', 'web', 'app', 'blockchain', 'crypto', 'meetup', 'networking'],
+            community: ['community', 'volunteer', 'charity', 'fundraiser', 'market', 'farmers', 'flea', 'fair', 'carnival', 'parade', 'neighborhood', 'social', 'meetup', 'cleanup', 'church'],
+        };
+
+        function matchesSearch(event) {
+            if (!searchQuery) return true;
+            const text = `${event.name} ${event.description} ${event.location}`.toLowerCase();
+            // Split query into words, all must match
+            const words = searchQuery.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+            return words.every(w => text.includes(w));
+        }
+
+        function matchesCategory(event) {
+            if (activeCategory === 'all') return true;
+            const keywords = CATEGORY_KEYWORDS[activeCategory] || [];
+            const text = `${event.name} ${event.description} ${event.location}`.toLowerCase();
+            return keywords.some(kw => text.includes(kw));
+        }
+
+        function matchesDate(event) {
+            if (!dateFrom && !dateTo) return true;
+            if (!event.date) return false;
+            try {
+                // Parse date string to extract just YYYY-MM-DD to avoid timezone issues
+                const raw = event.date;
+                let y, m, d;
+                const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (isoMatch) {
+                    y = parseInt(isoMatch[1]);
+                    m = parseInt(isoMatch[2]) - 1;
+                    d = parseInt(isoMatch[3]);
+                } else {
+                    const parsed = new Date(raw);
+                    if (isNaN(parsed)) return false;
+                    y = parsed.getFullYear();
+                    m = parsed.getMonth();
+                    d = parsed.getDate();
+                }
+                const evDay = new Date(y, m, d);
+                if (dateFrom && evDay < dateFrom) return false;
+                if (dateTo && evDay > dateTo) return false;
+                return true;
+            } catch(e) { return false; }
+        }
+
+        const SOURCE_COLORS = {
+            'Eventbrite': '#f05537',
+            'Meetup': '#ed1c40',
+            'AllEvents': '#7c3aed',
+            'Ticketmaster': '#026cdf',
+            'Facebook': '#1877f2',
+            'Yelp': '#d32323',
+        };
+
+        // Init map
+        map = L.map('map', {
+            center: [47.6062, -122.3321], // Default: Seattle
+            zoom: 12,
+            zoomControl: true,
+        });
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            subdomains: 'abcd',
+        }).addTo(map);
+
+        // Radius input
+        const radiusInput = document.getElementById('radius');
+        radiusInput.addEventListener('input', () => {
+            let val = parseInt(radiusInput.value) || 1;
+            if (val < 1) val = 1;
+            if (val > 100) val = 100;
+            if (pinLat !== null) {
+                updateRadiusCircle();
+            }
+        });
+        radiusInput.addEventListener('blur', () => {
+            let val = parseInt(radiusInput.value) || 10;
+            if (val < 1) val = 1;
+            if (val > 100) val = 100;
+            radiusInput.value = val;
+        });
+
+        // Drop pin on click
+        map.on('click', (e) => {
+            pinLat = e.latlng.lat;
+            pinLon = e.latlng.lng;
+            placePin(pinLat, pinLon);
+            document.getElementById('btn-search').disabled = false;
+            document.getElementById('map-hint').style.opacity = '0';
+        });
+
+        function placePin(lat, lon) {
+            if (pinMarker) map.removeLayer(pinMarker);
+            if (radiusCircle) map.removeLayer(radiusCircle);
+
+            const pinIcon = L.divIcon({
+                className: 'pin-marker',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+            });
+
+            pinMarker = L.marker([lat, lon], { icon: pinIcon, draggable: true }).addTo(map);
+            pinMarker.on('dragend', (e) => {
+                pinLat = e.target.getLatLng().lat;
+                pinLon = e.target.getLatLng().lng;
+                updateRadiusCircle();
+            });
+
+            updateRadiusCircle();
+        }
+
+        let radiusDragMarker = null;
+        let radiusMask = null;
+
+        function buildMaskPolygon(lat, lon, radiusMeters) {
+            // Outer ring: huge rectangle covering the whole world
+            const outer = [
+                [-90, -180], [-90, 180], [90, 180], [90, -180], [-90, -180]
+            ];
+            // Inner ring: circle cutout (64 points)
+            const inner = [];
+            const steps = 64;
+            for (let i = 0; i <= steps; i++) {
+                const angle = (i / steps) * 2 * Math.PI;
+                const pt = getEdgePoint(lat, lon, radiusMeters, (angle * 180 / Math.PI));
+                inner.push(pt);
+            }
+            return [outer, inner];
+        }
+
+        function updateRadiusCircle() {
+            if (radiusCircle) map.removeLayer(radiusCircle);
+            if (radiusDragMarker) map.removeLayer(radiusDragMarker);
+            if (radiusMask) map.removeLayer(radiusMask);
+
+            const meters = radiusInput.value * 1609.34;
+
+            // Gray mask outside radius
+            const maskCoords = buildMaskPolygon(pinLat, pinLon, meters);
+            radiusMask = L.polygon(maskCoords, {
+                color: 'none',
+                fillColor: '#000',
+                fillOpacity: 0.4,
+                interactive: false,
+            }).addTo(map);
+
+            // Radius border circle
+            radiusCircle = L.circle([pinLat, pinLon], {
+                radius: meters,
+                color: '#4f46e5',
+                fill: false,
+                weight: 1.5,
+                dashArray: '6 4',
+            }).addTo(map);
+
+            // Add a draggable handle on the circle edge (east side)
+            const edgePoint = getEdgePoint(pinLat, pinLon, meters, 90);
+            const handleIcon = L.divIcon({
+                className: '',
+                html: '<div style="width:14px;height:14px;background:#4f46e5;border:2px solid #fff;border-radius:50%;cursor:ew-resize;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7],
+            });
+            radiusDragMarker = L.marker(edgePoint, { icon: handleIcon, draggable: true }).addTo(map);
+
+            radiusDragMarker.on('drag', (e) => {
+                const handleLatLng = e.target.getLatLng();
+                const newRadius = map.distance([pinLat, pinLon], handleLatLng);
+                radiusCircle.setRadius(newRadius);
+                const newMiles = Math.round(newRadius / 1609.34);
+                radiusInput.value = Math.max(1, Math.min(100, newMiles));
+                // Update mask
+                if (radiusMask) map.removeLayer(radiusMask);
+                const maskCoords = buildMaskPolygon(pinLat, pinLon, newRadius);
+                radiusMask = L.polygon(maskCoords, {
+                    color: 'none', fillColor: '#000', fillOpacity: 0.4, interactive: false,
+                }).addTo(map);
+            });
+
+            radiusDragMarker.on('dragend', (e) => {
+                const handleLatLng = e.target.getLatLng();
+                const newRadius = map.distance([pinLat, pinLon], handleLatLng);
+                const newMiles = Math.max(1, Math.min(100, Math.round(newRadius / 1609.34)));
+                radiusInput.value = newMiles;
+                // Snap handle back to the circle edge
+                const snapped = getEdgePoint(pinLat, pinLon, newMiles * 1609.34, 90);
+                radiusDragMarker.setLatLng(snapped);
+            });
+        }
+
+        function getEdgePoint(lat, lon, radiusMeters, bearingDeg) {
+            const R = 6378137; // earth radius in meters
+            const brng = bearingDeg * Math.PI / 180;
+            const lat1 = lat * Math.PI / 180;
+            const lon1 = lon * Math.PI / 180;
+            const lat2 = Math.asin(Math.sin(lat1) * Math.cos(radiusMeters / R) +
+                Math.cos(lat1) * Math.sin(radiusMeters / R) * Math.cos(brng));
+            const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(radiusMeters / R) * Math.cos(lat1),
+                Math.cos(radiusMeters / R) - Math.sin(lat1) * Math.sin(lat2));
+            return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
+        }
+
+        // Zip code geocoding
+        async function goToZip(zip, andSearch) {
+            if (!/^\d{5}$/.test(zip)) return;
+            try {
+                const resp = await fetch(`/api/geocode-zip?zip=${zip}`);
+                const data = await resp.json();
+                if (data.lat) {
+                    pinLat = data.lat;
+                    pinLon = data.lon;
+                    map.setView([pinLat, pinLon], 13);
+                    placePin(pinLat, pinLon);
+                    document.getElementById('btn-search').disabled = false;
+                    document.getElementById('map-hint').style.opacity = '0';
+                    if (andSearch) searchEvents();
+                } else {
+                    alert('Zip code not found');
+                }
+            } catch (e) {
+                alert('Could not look up zip code');
+            }
+        }
+
+        document.getElementById('zip-go').addEventListener('click', () => {
+            goToZip(document.getElementById('zip-input').value.trim(), true);
+        });
+
+        document.getElementById('zip-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                goToZip(e.target.value.trim(), true);
+            }
+        });
+
+        document.getElementById('radius').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (pinLat !== null) searchEvents();
+            }
+        });
+
+        // Geolocation
+        document.getElementById('btn-locate').addEventListener('click', () => {
+            if (!navigator.geolocation) return alert('Geolocation not supported by your browser');
+            const btn = document.getElementById('btn-locate');
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    pinLat = pos.coords.latitude;
+                    pinLon = pos.coords.longitude;
+                    map.setView([pinLat, pinLon], 13);
+                    placePin(pinLat, pinLon);
+                    document.getElementById('btn-search').disabled = false;
+                    document.getElementById('map-hint').style.opacity = '0';
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = '';
+                },
+                (err) => {
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = '';
+                    if (err.code === 1) {
+                        alert('Location access denied. Please allow location access in your browser settings, or enter a zip code instead.');
+                    } else if (err.code === 2) {
+                        alert('Location unavailable. Try entering a zip code instead.');
+                    } else {
+                        alert('Location request timed out. Try entering a zip code instead.');
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        });
+
+        // Search events
+        document.getElementById('btn-search').addEventListener('click', searchEvents);
+
+        async function searchEvents() {
+            if (pinLat === null) return;
+
+            const loading = document.getElementById('loading');
+            const searchBtn = document.getElementById('btn-search');
+            loading.classList.add('visible');
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<div class="btn-spinner"></div>';
+            searchBtn.disabled = true;
+
+            // Clear previous
+            clearEventMarkers();
+            closePanel();
+            document.getElementById('event-count').classList.remove('visible');
+            document.getElementById('source-filters').classList.remove('visible');
+            document.getElementById('list-toggle').classList.remove('visible');
+
+            try {
+                const radius = radiusInput.value;
+                const resp = await fetch(`/api/events?lat=${pinLat}&lon=${pinLon}&radius=${radius}`);
+                const data = await resp.json();
+                allEvents = data.events || [];
+
+                // Set active sources from results
+                const sources = new Set(allEvents.map(e => e.source));
+                activeSources = sources;
+
+                // Assign approximate positions to events without coords
+                assignPositions();
+
+                // Place markers and update counts
+                applyFilters();
+
+            } catch (err) {
+                console.error(err);
+                alert('Error fetching events. Try again.');
+            } finally {
+                loading.classList.remove('visible');
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Scout';
+                searchBtn.disabled = false;
+            }
+        }
+
+        function assignPositions() {
+            // Events at the exact pin location (no real coords) get tiny offsets
+            // so markers don't stack on top of each other
+            const atPin = allEvents.filter(e => e._no_exact_location);
+            const angleStep = (2 * Math.PI) / Math.max(atPin.length, 1);
+            atPin.forEach((e, i) => {
+                const angle = angleStep * i;
+                // ~0.002 degrees ≈ 150 meters — keeps them on land near the pin
+                const r = 0.002 + (i * 0.0005);
+                e.lat = e.lat + r * Math.cos(angle);
+                e.lon = e.lon + r * Math.sin(angle);
+            });
+        }
+
+        function getFilteredEvents() {
+            return allEvents.filter(e =>
+                activeSources.has(e.source) && matchesCategory(e) && matchesDate(e) && matchesSearch(e)
+            );
+        }
+
+        function applyFilters() {
+            renderMarkers();
+            renderEventList();
+            // Count only markers that are actually on the map
+            const markerCount = eventMarkers.length;
+            const countEl = document.getElementById('event-count');
+            countEl.innerHTML = `<strong>${markerCount}</strong> events found nearby`;
+            countEl.classList.add('visible');
+            if (allEvents.length > 0) {
+                document.getElementById('list-toggle').classList.add('visible');
+            }
+        }
+
+        function renderMarkers() {
+            clearEventMarkers();
+            markerClusterGroup = L.markerClusterGroup({
+                maxClusterRadius: 35,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                iconCreateFunction: function(cluster) {
+                    const count = cluster.getChildCount();
+                    const size = count > 99 ? 36 : 28;
+                    return L.divIcon({
+                        html: `<div style="background:#4f46e5;color:#fff;border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${count > 99 ? 11 : 12}px;font-weight:700;font-family:Inter,sans-serif;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${count}</div>`,
+                        className: '',
+                        iconSize: [size, size],
+                        iconAnchor: [size/2, size/2],
+                    });
+                },
+            });
+
+            const radiusMi = parseFloat(radiusInput.value) || 10;
+
+            allEvents.forEach((event, idx) => {
+                if (!activeSources.has(event.source)) return;
+                if (!matchesCategory(event)) return;
+                if (!matchesDate(event)) return;
+                if (!matchesSearch(event)) return;
+                if (!event.lat || !event.lon) return;
+
+                // Check if event is outside the search radius
+                let outside = false;
+                if (pinLat !== null && pinLon !== null) {
+                    const dLat = (event.lat - pinLat) * Math.PI / 180;
+                    const dLon = (event.lon - pinLon) * Math.PI / 180;
+                    const a = Math.sin(dLat/2)**2 + Math.cos(pinLat*Math.PI/180) * Math.cos(event.lat*Math.PI/180) * Math.sin(dLon/2)**2;
+                    const distMi = 2 * 3956 * Math.asin(Math.sqrt(a));
+                    outside = distMi > radiusMi;
+                }
+
+                const sourceClass = 'marker-' + event.source.toLowerCase().replace(/[^a-z]/g, '');
+                const outsideClass = outside ? ' outside-radius' : '';
+                const size = outside ? 10 : 14;
+                const icon = L.divIcon({
+                    className: `custom-marker ${sourceClass}${outsideClass}`,
+                    iconSize: [size, size],
+                    iconAnchor: [size/2, size/2],
+                });
+
+                const marker = L.marker([event.lat, event.lon], { icon });
+
+                marker.bindTooltip(event.name, {
+                    direction: 'top',
+                    offset: [0, -10],
+                    className: 'event-tooltip',
+                });
+
+                marker.on('click', () => showEventPanel(event));
+                markerClusterGroup.addLayer(marker);
+                eventMarkers.push(marker);
+            });
+
+            map.addLayer(markerClusterGroup);
+        }
+
+        function clearEventMarkers() {
+            if (markerClusterGroup) {
+                map.removeLayer(markerClusterGroup);
+                markerClusterGroup = null;
+            }
+            eventMarkers = [];
+        }
+
+        function renderSourceFilters(sources) {
+            const container = document.getElementById('source-filters');
+            container.innerHTML = '';
+            Object.entries(sources).forEach(([source, count]) => {
+                const badge = document.createElement('div');
+                badge.className = 'source-badge active';
+                badge.dataset.source = source;
+                badge.innerHTML = `${source}<span class="count">${count}</span>`;
+                badge.style.borderColor = activeSources.has(source) ? (SOURCE_COLORS[source] || '#4f46e5') : '';
+                badge.style.color = activeSources.has(source) ? (SOURCE_COLORS[source] || '#4f46e5') : '';
+
+                badge.addEventListener('click', () => {
+                    if (activeSources.has(source)) {
+                        activeSources.delete(source);
+                        badge.classList.remove('active');
+                        badge.style.borderColor = '';
+                        badge.style.color = '';
+                    } else {
+                        activeSources.add(source);
+                        badge.classList.add('active');
+                        badge.style.borderColor = SOURCE_COLORS[source] || '#4f46e5';
+                        badge.style.color = SOURCE_COLORS[source] || '#4f46e5';
+                    }
+                    applyFilters();
+                });
+
+                container.appendChild(badge);
+            });
+            if (Object.keys(sources).length > 0) {
+                container.classList.add('visible');
+            }
+        }
+
+        function showEventPanel(event) {
+            const panel = document.getElementById('event-panel');
+            document.getElementById('panel-title').textContent = event.name;
+
+            let html = '';
+
+            if (event.image) {
+                html += `<img class="event-image" src="${escapeHtml(event.image)}" alt="" onerror="this.style.display='none'" />`;
+            }
+
+            html += '<div class="event-meta">';
+
+            if (event.date) {
+                let dateStr = event.date;
+                try {
+                    const d = new Date(event.date);
+                    if (!isNaN(d)) {
+                        dateStr = d.toLocaleDateString('en-US', {
+                            weekday: 'short', month: 'short', day: 'numeric',
+                            hour: 'numeric', minute: '2-digit',
+                        });
+                    }
+                } catch(e) {}
+                html += `<div class="event-meta-row">
+                    <svg viewBox="0 0 24 24"><path d="M8 2v3m8-3v3M3 8h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                    ${escapeHtml(dateStr)}
+                </div>`;
+            }
+
+            if (event.location) {
+                html += `<div class="event-meta-row">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg>
+                    ${escapeHtml(event.location)}
+                </div>`;
+            }
+
+            html += `<div class="event-meta-row">
+                <span class="event-source-tag">${escapeHtml(event.source)}</span>
+            </div>`;
+
+            html += '</div>';
+
+            if (event.description) {
+                html += `<div class="event-description">${escapeHtml(event.description)}</div>`;
+            }
+
+            if (event.url) {
+                html += `<a href="${escapeHtml(event.url)}" target="_blank" rel="noopener" class="btn-open-event">View Event Details</a>`;
+            }
+
+            document.getElementById('panel-body').innerHTML = html;
+            panel.classList.add('open');
+
+            // Hide event count when panel is open
+            document.getElementById('event-count').classList.remove('visible');
+        }
+
+        function closePanel() {
+            document.getElementById('event-panel').classList.remove('open');
+            if (allEvents.length > 0) {
+                document.getElementById('event-count').classList.add('visible');
+            }
+        }
+
+        document.getElementById('panel-close').addEventListener('click', closePanel);
+
+        // Event list sidebar
+        document.getElementById('list-toggle').addEventListener('click', () => {
+            document.getElementById('event-sidebar').classList.add('open');
+        });
+        document.getElementById('sidebar-close').addEventListener('click', () => {
+            document.getElementById('event-sidebar').classList.remove('open');
+        });
+
+        function renderEventList() {
+            const container = document.getElementById('event-list');
+            const filtered = allEvents.filter(e => activeSources.has(e.source) && matchesCategory(e) && matchesDate(e) && matchesSearch(e));
+
+            // Sort by date
+            filtered.sort((a, b) => {
+                const da = new Date(a.date), db = new Date(b.date);
+                if (isNaN(da)) return 1;
+                if (isNaN(db)) return -1;
+                return da - db;
+            });
+
+            container.innerHTML = filtered.map((event, i) => {
+                const color = SOURCE_COLORS[event.source] || '#4f46e5';
+                let monthStr = '', dayStr = '', timeStr = '';
+                if (event.date) {
+                    try {
+                        const d = new Date(event.date);
+                        if (!isNaN(d)) {
+                            monthStr = d.toLocaleDateString('en-US', { month: 'short' });
+                            dayStr = d.getDate();
+                            timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                        }
+                    } catch(e) {}
+                }
+                const venue = event.location ? escapeHtml(event.location) : '';
+                return `<div class="event-list-item" data-idx="${i}">
+                    <div class="event-list-date">
+                        <div class="month">${monthStr || '???'}</div>
+                        <div class="day">${dayStr || '—'}</div>
+                    </div>
+                    <div class="event-list-info">
+                        <h3>${escapeHtml(event.name)}</h3>
+                        ${venue ? `<div class="venue">${venue}</div>` : ''}
+                        <div class="meta">
+                            <span class="source-dot" style="background:${color}"></span>
+                            ${escapeHtml(event.source)}
+                            ${timeStr ? ' &middot; ' + escapeHtml(timeStr) : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:#666;padding:40px 20px;font-size:13px;">No events match this filter</div>';
+            }
+
+            container.querySelectorAll('.event-list-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const idx = parseInt(el.dataset.idx);
+                    const event = filtered[idx];
+                    if (event) {
+                        showEventPanel(event);
+                        if (event.lat && event.lon) {
+                            map.panTo([event.lat, event.lon]);
+                        }
+                        document.getElementById('event-sidebar').classList.remove('open');
+                    }
+                });
+            });
+        }
+
+        // Text search
+        const searchInput = document.getElementById('search-input');
+        const searchClear = document.getElementById('search-clear');
+        let searchDebounce = null;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                searchQuery = searchInput.value.trim();
+                searchClear.classList.toggle('visible', !!searchQuery);
+                if (allEvents.length > 0) applyFilters();
+            }, 300);
+        });
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchQuery = searchInput.value.trim();
+                searchClear.classList.toggle('visible', !!searchQuery);
+                if (pinLat !== null && allEvents.length === 0) {
+                    searchEvents();
+                } else if (allEvents.length > 0) {
+                    applyFilters();
+                }
+            }
+        });
+        searchClear.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            searchClear.classList.remove('visible');
+            if (allEvents.length > 0) applyFilters();
+        });
+
+        // Date range picker
+        const dateFromEl = document.getElementById('date-from');
+        const dateToEl = document.getElementById('date-to');
+        const dateClear = document.getElementById('date-clear');
+
+        function onDateChange() {
+            dateFrom = dateFromEl.value ? new Date(dateFromEl.value + 'T00:00:00') : null;
+            dateTo = dateToEl.value ? new Date(dateToEl.value + 'T00:00:00') : null;
+            // If only "from" is set, it acts as a single-day filter
+            // If both set, it's a range
+            dateClear.classList.toggle('visible', !!(dateFrom || dateTo));
+
+            // Auto-set "to" min to "from" value
+            if (dateFromEl.value) dateToEl.min = dateFromEl.value;
+            if (dateToEl.value) dateFromEl.max = dateToEl.value;
+
+            applyFilters();
+        }
+
+        dateFromEl.addEventListener('change', onDateChange);
+        dateToEl.addEventListener('change', onDateChange);
+        dateClear.addEventListener('click', () => {
+            dateFromEl.value = '';
+            dateToEl.value = '';
+            dateFromEl.max = '';
+            dateToEl.min = '';
+            dateFrom = null;
+            dateTo = null;
+            dateClear.classList.remove('visible');
+            applyFilters();
+        });
+
+        // Category toggle
+        const catToggle = document.getElementById('category-toggle');
+        const catBar = document.getElementById('category-bar');
+        const catLabel = document.getElementById('active-cat-label');
+
+        catToggle.addEventListener('click', () => {
+            catBar.classList.toggle('open');
+            catToggle.classList.toggle('open');
+        });
+
+        // Category filter chips
+        document.querySelectorAll('.cat-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                activeCategory = chip.dataset.cat;
+                catLabel.textContent = chip.textContent;
+                catBar.classList.remove('open');
+                catToggle.classList.remove('open');
+                applyFilters();
+            });
+        });
+
+        // Click outside panel to close
+        map.on('click', () => closePanel());
+
+        // Escape HTML helper
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Auto-detect location on load
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    pinLat = pos.coords.latitude;
+                    pinLon = pos.coords.longitude;
+                    map.setView([pinLat, pinLon], 13);
+                    placePin(pinLat, pinLon);
+                    document.getElementById('btn-search').disabled = false;
+                    document.getElementById('map-hint').style.opacity = '0';
+                },
+                () => { /* silently fall back to default */ },
+                { enableHighAccuracy: true, timeout: 5000 }
+            );
+        }
+
+        // Add tooltip styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .event-tooltip {
+                background: #fff !important;
+                border: 1px solid rgba(0,0,0,0.1) !important;
+                color: #1a1a1a !important;
+                font-family: 'DM Sans', sans-serif !important;
+                font-size: 12px !important;
+                font-weight: 500 !important;
+                padding: 6px 10px !important;
+                border-radius: 8px !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+            }
+            .event-tooltip::before { border-top-color: #fff !important; }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
