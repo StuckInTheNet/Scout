@@ -4,6 +4,8 @@ Drop a pin anywhere on the map, set a radius, and instantly discover events happ
 
 ![Scout](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
+![Scout Screenshot](screenshot.png)
+
 ## What it does
 
 Scout scrapes public event listings from Eventbrite and AllEvents to find concerts, food festivals, comedy shows, yoga classes, and everything in between. Every event appears as a pin on the map so you can see what's happening around you at a glance.

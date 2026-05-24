@@ -1260,7 +1260,6 @@
             clearEventMarkers();
             closePanel();
             document.getElementById('event-count').classList.remove('visible');
-            document.getElementById('source-filters').classList.remove('visible');
             document.getElementById('list-toggle').classList.remove('visible');
 
             try {
@@ -1393,38 +1392,6 @@
             eventMarkers = [];
         }
 
-        function renderSourceFilters(sources) {
-            const container = document.getElementById('source-filters');
-            container.innerHTML = '';
-            Object.entries(sources).forEach(([source, count]) => {
-                const badge = document.createElement('div');
-                badge.className = 'source-badge active';
-                badge.dataset.source = source;
-                badge.innerHTML = `${source}<span class="count">${count}</span>`;
-                badge.style.borderColor = activeSources.has(source) ? (SOURCE_COLORS[source] || '#4f46e5') : '';
-                badge.style.color = activeSources.has(source) ? (SOURCE_COLORS[source] || '#4f46e5') : '';
-
-                badge.addEventListener('click', () => {
-                    if (activeSources.has(source)) {
-                        activeSources.delete(source);
-                        badge.classList.remove('active');
-                        badge.style.borderColor = '';
-                        badge.style.color = '';
-                    } else {
-                        activeSources.add(source);
-                        badge.classList.add('active');
-                        badge.style.borderColor = SOURCE_COLORS[source] || '#4f46e5';
-                        badge.style.color = SOURCE_COLORS[source] || '#4f46e5';
-                    }
-                    applyFilters();
-                });
-
-                container.appendChild(badge);
-            });
-            if (Object.keys(sources).length > 0) {
-                container.classList.add('visible');
-            }
-        }
 
         function showEventPanel(event) {
             const panel = document.getElementById('event-panel');
